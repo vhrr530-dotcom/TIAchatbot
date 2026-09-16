@@ -231,6 +231,7 @@
       font-size: 0.92rem;
       line-height: 1.5;
       position: relative;
+      white-space: pre-wrap;
     }
 
     .message.bot {
@@ -301,7 +302,7 @@
       background: var(--primary-dark);
     }
 
-    /* Modal Styles for Supabase */
+    /* Modal Styles */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -374,7 +375,7 @@
         <span id="supabase-status-text">Disconnected</span>
       </div>
       <button class="btn btn-outline" style="margin-top: 0.75rem;" onclick="openSupabaseModal()">
-        <i data-lucide="settings" style="width: 15px;"></i> Configure Supabase
+        <i data-lucide="settings" style="width: 15px;"></i> Configure Supabase & LLM
       </button>
     </div>
 
@@ -436,17 +437,17 @@
     </div>
   </main>
 
-  <!-- Supabase Config Modal -->
+  <!-- Supabase & Groq Config Modal -->
   <div class="modal-backdrop" id="supabase-modal">
     <div class="modal">
       <div class="modal-header">
         <h3 style="display: flex; align-items: center; gap: 0.5rem;">
-          <i data-lucide="database" style="color: #10b981;"></i> Connect Supabase
+          <i data-lucide="database" style="color: #10b981;"></i> Service Configuration
         </h3>
         <i data-lucide="x" style="cursor: pointer;" onclick="closeSupabaseModal()"></i>
       </div>
       <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
-        Provide your Supabase credentials to query the <code>documents</code> embeddings table created with your SQL script.
+        Configure your Supabase vector store and Groq API keys below.
       </p>
 
       <div class="form-group">
@@ -457,6 +458,11 @@
       <div class="form-group">
         <label>Anon / Public API Key</label>
         <input type="password" id="sb-key" placeholder="eyJhbGciOi..." />
+      </div>
+
+      <div class="form-group">
+        <label>Groq API Key</label>
+        <input type="password" id="groq-key" placeholder="gsk_..." />
       </div>
 
       <div class="form-group">
@@ -477,16 +483,19 @@
 
     let supabaseClient = null;
 
-    // Load saved settings
+    // Load saved settings on page mount
     window.addEventListener('DOMContentLoaded', () => {
       const url = localStorage.getItem('tia_sb_url');
       const key = localStorage.getItem('tia_sb_key');
+      const groqKey = localStorage.getItem('tia_groq_key');
       const fn = localStorage.getItem('tia_sb_fn') || 'match_documents';
 
+      if (url) document.getElementById('sb-url').value = url;
+      if (key) document.getElementById('sb-key').value = key;
+      if (groqKey) document.getElementById('groq-key').value = groqKey;
+      if (fn) document.getElementById('sb-function').value = fn;
+
       if (url && key) {
-        document.getElementById('sb-url').value = url;
-        document.getElementById('sb-key').value = key;
-        document.getElementById('sb-function').value = fn;
         initSupabase(url, key);
       }
     });
@@ -502,8 +511,11 @@
     async function initSupabase(url, key) {
       try {
         supabaseClient = supabase.createClient(url, key);
-        // Simple ping/check
-        const { error } = await supabaseClient.from('documents').select('count', { count: 'exact', head: true });
+        
+        // Test query against documents table
+        const { error } = await supabaseClient
+          .from('documents')
+          .select('count', { count: 'exact', head: true });
         
         const badge = document.getElementById('supabase-status-badge');
         const text = document.getElementById('supabase-status-text');
@@ -512,6 +524,7 @@
           badge.className = 'status-badge status-connected';
           text.innerText = 'Connected to pgvector';
         } else {
+          // If table doesn't exist yet but credentials work, still show connected
           badge.className = 'status-badge status-connected';
           text.innerText = 'Connected';
         }
@@ -530,6 +543,7 @@
     function saveSupabaseSettings() {
       const url = document.getElementById('sb-url').value.trim();
       const key = document.getElementById('sb-key').value.trim();
+      const groqKey = document.getElementById('groq-key').value.trim();
       const fn = document.getElementById('sb-function').value.trim();
 
       if (!url || !key) {
@@ -539,6 +553,7 @@
 
       localStorage.setItem('tia_sb_url', url);
       localStorage.setItem('tia_sb_key', key);
+      localStorage.setItem('tia_groq_key', groqKey);
       localStorage.setItem('tia_sb_fn', fn);
 
       initSupabase(url, key);
@@ -563,23 +578,19 @@
       appendMessage('user', query);
       input.value = '';
 
-      // Simulated RAG Response or Supabase fetch
-     <div class="form-group">
-        <label>Anon / Public API Key</label>
-        <input type="password" id="sb-key" placeholder="eyJhbGciOi..." />
-      </div>
+      // Check if configured
+      if (!supabaseClient) {
+        setTimeout(() => {
+          appendMessage('bot', 'Supabase is not configured yet. Please click "Configure Supabase & LLM" in the sidebar to add your project credentials.');
+        }, 500);
+        return;
+      }
 
-      <!-- Add Groq API Key field -->
-      <div class="form-group">
-        <label>Groq API Key (Free from console.groq.com)</label>
-        <input type="password" id="groq-key" placeholder="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
-" />
-      </div>
-
-      <div class="form-group">
-        <label>RPC Match Function Name (Optional)</label>
-        <input type="text" id="sb-function" value="match_documents" placeholder="match_documents" />
-      </div>
+      // Placeholder bot response (replace with your vector match and Groq call)
+      setTimeout(() => {
+        appendMessage('bot', 'Query received. Integrate your embedding generation and RPC call to fetch documents.');
+      }, 700);
+    }
 
     function handleKeyDown(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
