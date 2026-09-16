@@ -564,15 +564,21 @@
       input.value = '';
 
       // Simulated RAG Response or Supabase fetch
-      setTimeout(async () => {
-        if (supabaseClient) {
-          // You can call your RPC function or your backend endpoint here
-          appendMessage('bot', `*(Connected to Supabase)*: Querying documents related to "${query}" with system message constraints applied.`);
-        } else {
-          appendMessage('bot', `Supabase is not connected yet. Please click **"Configure Supabase"** on the left panel to link your project credentials and query your 3 source PDFs.`);
-        }
-      }, 600);
-    }
+     <div class="form-group">
+        <label>Anon / Public API Key</label>
+        <input type="password" id="sb-key" placeholder="eyJhbGciOi..." />
+      </div>
+
+      <!-- Add Groq API Key field -->
+      <div class="form-group">
+        <label>Groq API Key (Free from console.groq.com)</label>
+        <input type="password" id="groq-key" placeholder="gsk_..." />
+      </div>
+
+      <div class="form-group">
+        <label>RPC Match Function Name (Optional)</label>
+        <input type="text" id="sb-function" value="match_documents" placeholder="match_documents" />
+      </div>
 
     function handleKeyDown(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
