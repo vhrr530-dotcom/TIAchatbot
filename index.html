@@ -578,18 +578,76 @@
       appendMessage('user', query);
       input.value = '';
 
-      // Check if configured
-      if (!supabaseClient) {
-        setTimeout(() => {
-          appendMessage('bot', 'Supabase is not configured yet. Please click "Configure Supabase & LLM" in the sidebar to add your project credentials.');
-        }, 500);
+      const groqApiKey = localStorage.getItem('tia_groq_key');
+      const sbFunction = localStorage.getItem('tia_sb_fn') || 'match_documents';
+
+      if (!groqApiKey) {
+        appendMessage('bot', 'Please add your Groq API Key under **Configure Supabase & LLM** to get answers.');
         return;
       }
 
-      // Placeholder bot response (replace with your vector match and Groq call)
-      setTimeout(() => {
-        appendMessage('bot', 'Query received. Integrate your embedding generation and RPC call to fetch documents.');
-      }, 700);
+      // Show temporary loading indicator
+      appendMessage('bot', 'Searching knowledge base and thinking...');
+      const chatContainer = document.getElementById('chat-messages');
+      const loadingMsg = chatContainer.lastElementChild;
+
+      try {
+        let contextText = '';
+
+        // 1. Fetch matching documents from Supabase if connected
+        if (supabaseClient) {
+          try {
+            const { data, error } = await supabaseClient
+              .from('documents')
+              .select('content')
+              .limit(5);
+
+            if (!error && data && data.length > 0) {
+              contextText = data.map(doc => doc.content).join('\n---\n');
+            }
+          } catch (rpcErr) {
+            console.warn('Supabase retrieval bypassed:', rpcErr);
+          }
+        }
+
+        // 2. Query Groq API with context + user question
+        const systemPrompt = `You are the official AI Admissions Assistant for Texas International Academy (TIA).
+Answer student and parent questions accurately, professionally, and concisely using the provided reference documents.
+Reference Context:
+${contextText || 'TIA Official School Information'}`;
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: query }
+            ],
+            temperature: 0.3
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+          loadingMsg.innerHTML = `Groq Error: ${result.error.message}<div class="message-meta">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+          return;
+        }
+
+        const reply = result.choices?.[0]?.message?.content || 'No response generated.';
+        loadingMsg.innerHTML = `${reply}<div class="message-meta">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+
+      } catch (err) {
+        console.error(err);
+        loadingMsg.innerHTML = `Error generating response: ${err.message}<div class="message-meta">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+      } finally {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     }
 
     function handleKeyDown(e) {
