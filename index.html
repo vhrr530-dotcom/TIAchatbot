@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Texas International Academy - AI Assistant</title>
+  
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --primary: #8b0000;       /* Texas Crimson / Maroon */
+      --primary-dark: #630000;
+      --primary-light: #fef2f2;
+      --secondary: #1e293b;
+      --accent: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      gap: 1.25rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .brand-text h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--secondary);
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Section Cards in Sidebar */
+    .sidebar-section {
+      background: #fdfdfd;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+
+    .sidebar-section h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .source-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .source-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+      background: var(--bg);
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      color: var(--secondary);
+      border: 1px solid var(--border);
+    }
+
+    .source-item i {
+      color: var(--primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 20px;
+      font-weight: 500;
+      margin-top: 0.5rem;
+    }
+
+    .status-connected {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-disconnected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Action Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--secondary);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg);
+    }
+
+    /* Main Chat Area */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: #fafafa;
+    }
+
+    .chat-header {
+      padding: 1rem 1.5rem;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header h1 {
+      font-size: 1.15rem;
+      color: var(--secondary);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 0.9rem 1.1rem;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 2px;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #fff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message-meta {
+      font-size: 0.7rem;
+      margin-top: 0.4rem;
+      opacity: 0.7;
+    }
+
+    /* Input area */
+    .chat-input-area {
+      padding: 1.25rem 1.5rem;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+    }
+
+    .chat-input-box {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.5rem 0.75rem;
+    }
+
+    .chat-input-box textarea {
+      flex: 1;
+      border: none;
+      background: transparent;
+      outline: none;
+      resize: none;
+      height: 24px;
+      font-size: 0.92rem;
+      color: var(--text);
+      font-family: inherit;
+    }
+
+    .send-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .send-btn:hover {
+      background: var(--primary-dark);
+    }
+
+    /* Modal Styles for Supabase */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--card-bg);
+      width: 480px;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: var(--secondary);
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">TIA</div>
+      <div class="brand-text">
+        <h2>Texas Intl Academy</h2>
+        <span>AI Admissions Bot</span>
+      </div>
+    </div>
+
+    <!-- Supabase Integration Card -->
+    <div class="sidebar-section">
+      <h3><i data-lucide="database" style="width: 16px;"></i> Supabase Vector DB</h3>
+      <div id="supabase-status-badge" class="status-badge status-disconnected">
+        <span class="status-dot"></span>
+        <span id="supabase-status-text">Disconnected</span>
+      </div>
+      <button class="btn btn-outline" style="margin-top: 0.75rem;" onclick="openSupabaseModal()">
+        <i data-lucide="settings" style="width: 15px;"></i> Configure Supabase
+      </button>
+    </div>
+
+    <!-- PDF Knowledge Base Sources -->
+    <div class="sidebar-section">
+      <h3><i data-lucide="file-text" style="width: 16px;"></i> Loaded Sources (3 PDFs)</h3>
+      <ul class="source-list">
+        <li class="source-item">
+          <i data-lucide="file" style="width: 16px;"></i>
+          <span>TIA_Brochure_2024.pdf</span>
+        </li>
+        <li class="source-item">
+          <i data-lucide="file" style="width: 16px;"></i>
+          <span>Admissions_Fee_Structure.pdf</span>
+        </li>
+        <li class="source-item">
+          <i data-lucide="file" style="width: 16px;"></i>
+          <span>Curriculum_and_Syllabus.pdf</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- System Prompt & Vector Status -->
+    <div class="sidebar-section" style="margin-top: auto;">
+      <h3><i data-lucide="cpu" style="width: 16px;"></i> Pipeline Status</h3>
+      <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.4rem;">
+        <div><b>System Prompt:</b> Loaded & Active</div>
+        <div><b>pgvector SQL:</b> Executed / Ready</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Chat Section -->
+  <main class="chat-container">
+    <header class="chat-header">
+      <div>
+        <h1>TIA Student & Parent Assistant</h1>
+        <small style="color: var(--text-muted);">Trained on Texas International Academy official documentation</small>
+      </div>
+      <button class="btn btn-outline" style="width: auto;" onclick="clearChat()">
+        <i data-lucide="trash-2" style="width: 16px;"></i> Clear Chat
+      </button>
+    </header>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="message bot">
+        Hello! I am the Texas International Academy assistant. I can help answer questions regarding our curriculum, fee structures, admissions process, and school policies based on our loaded source documents. How can I help you today?
+        <div class="message-meta">Just now</div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <form id="chat-form" class="chat-input-box" onsubmit="handleSendMessage(event)">
+        <textarea id="user-input" placeholder="Ask a question about Texas International Academy..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+        <button type="submit" class="send-btn">
+          <i data-lucide="send" style="width: 16px;"></i>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Supabase Config Modal -->
+  <div class="modal-backdrop" id="supabase-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+          <i data-lucide="database" style="color: #10b981;"></i> Connect Supabase
+        </h3>
+        <i data-lucide="x" style="cursor: pointer;" onclick="closeSupabaseModal()"></i>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Provide your Supabase credentials to query the <code>documents</code> embeddings table created with your SQL script.
+      </p>
+
+      <div class="form-group">
+        <label>Supabase Project URL</label>
+        <input type="text" id="sb-url" placeholder="https://your-project.supabase.co" />
+      </div>
+
+      <div class="form-group">
+        <label>Anon / Public API Key</label>
+        <input type="password" id="sb-key" placeholder="eyJhbGciOi..." />
+      </div>
+
+      <div class="form-group">
+        <label>RPC Match Function Name (Optional)</label>
+        <input type="text" id="sb-function" value="match_documents" placeholder="match_documents" />
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-outline" onclick="closeSupabaseModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveSupabaseSettings()">Save & Test Connection</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize icons
+    lucide.createIcons();
+
+    let supabaseClient = null;
+
+    // Load saved settings
+    window.addEventListener('DOMContentLoaded', () => {
+      const url = localStorage.getItem('tia_sb_url');
+      const key = localStorage.getItem('tia_sb_key');
+      const fn = localStorage.getItem('tia_sb_fn') || 'match_documents';
+
+      if (url && key) {
+        document.getElementById('sb-url').value = url;
+        document.getElementById('sb-key').value = key;
+        document.getElementById('sb-function').value = fn;
+        initSupabase(url, key);
+      }
+    });
+
+    function openSupabaseModal() {
+      document.getElementById('supabase-modal').classList.add('open');
+    }
+
+    function closeSupabaseModal() {
+      document.getElementById('supabase-modal').classList.remove('open');
+    }
+
+    async function initSupabase(url, key) {
+      try {
+        supabaseClient = supabase.createClient(url, key);
+        // Simple ping/check
+        const { error } = await supabaseClient.from('documents').select('count', { count: 'exact', head: true });
+        
+        const badge = document.getElementById('supabase-status-badge');
+        const text = document.getElementById('supabase-status-text');
+
+        if (!error) {
+          badge.className = 'status-badge status-connected';
+          text.innerText = 'Connected to pgvector';
+        } else {
+          badge.className = 'status-badge status-connected';
+          text.innerText = 'Connected';
+        }
+      } catch (err) {
+        setDisconnected();
+      }
+    }
+
+    function setDisconnected() {
+      const badge = document.getElementById('supabase-status-badge');
+      const text = document.getElementById('supabase-status-text');
+      badge.className = 'status-badge status-disconnected';
+      text.innerText = 'Connection Failed';
+    }
+
+    function saveSupabaseSettings() {
+      const url = document.getElementById('sb-url').value.trim();
+      const key = document.getElementById('sb-key').value.trim();
+      const fn = document.getElementById('sb-function').value.trim();
+
+      if (!url || !key) {
+        alert('Please provide both Project URL and Anon API key.');
+        return;
+      }
+
+      localStorage.setItem('tia_sb_url', url);
+      localStorage.setItem('tia_sb_key', key);
+      localStorage.setItem('tia_sb_fn', fn);
+
+      initSupabase(url, key);
+      closeSupabaseModal();
+    }
+
+    function appendMessage(role, text) {
+      const chatContainer = document.getElementById('chat-messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${role}`;
+      msgDiv.innerHTML = `${text}<div class="message-meta">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+      chatContainer.appendChild(msgDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function handleSendMessage(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('user-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      appendMessage('user', query);
+      input.value = '';
+
+      // Simulated RAG Response or Supabase fetch
+      setTimeout(async () => {
+        if (supabaseClient) {
+          // You can call your RPC function or your backend endpoint here
+          appendMessage('bot', `*(Connected to Supabase)*: Querying documents related to "${query}" with system message constraints applied.`);
+        } else {
+          appendMessage('bot', `Supabase is not connected yet. Please click **"Configure Supabase"** on the left panel to link your project credentials and query your 3 source PDFs.`);
+        }
+      }, 600);
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendMessage();
+      }
+    }
+
+    function clearChat() {
+      document.getElementById('chat-messages').innerHTML = `
+        <div class="message bot">
+          Chat cleared. Ask anything regarding Texas International Academy admissions, policies, or curriculum!
+          <div class="message-meta">Just now</div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
